@@ -1,0 +1,14 @@
+   .env
+   __pycache__/
+   *.pyc
+   *.pyo
+   *.pyd
+   .Python
+   env/
+   venv/
+   .venv/
+   my_site.html
+   *.log
+   test_*.py
+   check_env.py
+   app_backup.py
