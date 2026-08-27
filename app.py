@@ -178,13 +178,34 @@ def get_theme_styles(theme: str, color: str) -> Dict:
 def save_config_to_supabase(user_id: str):
     """Зберігає ВСЮ конфігурацію користувача в Supabase."""
     try:
-        import json # Переконайтеся, що json імпортовано
+        # 1. Збираємо повну конфігурацію як JSON
+        full_config_json = export_config()
         
-        # 1. Отримуємо JSON як рядок (для експорту в файл)
-        full_config_json_string = export_config()
+        # 🔍 ДІАГНОСТИКА: Що ми зберігаємо?
+        st.info("🔍 **ПЕРЕВІРКА ДАНИХ ПЕРЕД ЗБЕРЕЖЕННЯМ:**")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            gif_url = st.session_state.get('gif_url', '')
+            st.write(f"**GIF:** {'✅ Є' if gif_url else ' Немає'}")
+            if gif_url:
+                st.code(gif_url[:80] + "...")
+        with col2:
+            gallery = st.session_state.get('gallery_images', [])
+            st.write(f"**Галерея:** {'✅ ' + str(len(gallery)) + ' фото' if gallery else '❌ Немає'}")
+        with col3:
+            products = st.session_state.get('products', [])
+            st.write(f"**Товари:** {'✅ ' + str(len(products)) + ' шт' if products else '❌ Немає'}")
+            if products:
+                has_images = sum(1 for p in products if p.get('image'))
+                st.write(f"Зображень товарів: {has_images}")
         
-        # 2. 🔑 КРИТИЧНО ВАЖЛИВО: Перетворюємо рядок назад у словник Python для Supabase!
-        full_config_dict = json.loads(full_config_json_string)
+        import json
+        config_dict = json.loads(full_config_json)
+        st.write(f"📦 **Розмір JSON:** {len(full_config_json)} символів")
+        st.write(f" **GIF в JSON:** {'✅ Так' if 'gif_url' in config_dict and config_dict['gif_url'] else '❌ Ні'}")
+        
+        # 2. Перетворюємо рядок JSON у словник Python
+        full_config_dict = json.loads(full_config_json)
         
         # 3. Формуємо дані профілю
         profile_data = {
@@ -197,12 +218,10 @@ def save_config_to_supabase(user_id: str):
             'dark_mode': st.session_state.get('dark_mode_value', False),
             'avatar_url': st.session_state.get('avatar_image_data_uri', ''),
             'background_url': st.session_state.get('background_image_data_uri', ''),
-            'site_config': full_config_dict  # <-- ТЕПЕР ТУТ СЛОВНИК, А НЕ РЯДОК!
+            'site_config': full_config_dict
         }
         
-        # Тимчасова діагностика
-        print(f"🔍 ЗБЕРЕЖЕННЯ: site_config містить GIF? {'Так' if 'gif_url' in full_config_dict else 'Ні'}")
-        
+        # Зберігаємо в базу
         db.save_profile(user_id, profile_data)
         
         # Зберігаємо посилання та товари
@@ -212,11 +231,12 @@ def save_config_to_supabase(user_id: str):
         products = st.session_state.get('products', [])
         db.save_products(user_id, products)
         
+        st.success("✅ Дані збережено в базу!")
         return True
     except Exception as e:
-        print(f"Помилка збереження в Supabase: {e}")
+        st.error(f"❌ Помилка збереження в Supabase: {e}")
         return False
-    
+        
 def load_config_from_supabase(user_id: str):
     """
     Завантажує конфігурацію користувача з Supabase.
@@ -1715,7 +1735,7 @@ with tab1:
         st.download_button(
             label="📥 Завантажити конфігурацію (.json)",
             data=config_json,
-            file_name=f"mssg_config_{name.replace(' ', '_') if name else 'project'}.json",
+            file_name=f"SmartLink_config_{name.replace(' ', '_') if name else 'project'}.json",
             mime="application/json",
             use_container_width=True
         )
