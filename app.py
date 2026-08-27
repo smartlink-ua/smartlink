@@ -1289,41 +1289,45 @@ def generate_full_html(name, bio, avatar_image_data_uri, links, theme_color, the
 </body>
 </html>"""
 # ============================================================================
-# ПЕРЕВІРКА: Чи це публічне посилання користувача?
+# ПЕРЕВІРКА: Чи це публічне посилання користувача? (100% надійний варіант)
 # ============================================================================
+public_user_id = None
 try:
-    # Для сучасних версій Streamlit (>= 1.23)
-    public_user_id = st.query_params.get("user")
+    # Спроба отримати параметр сучасним способом
+    params = st.query_params
+    val = params.get("user")
+    public_user_id = val[0] if isinstance(val, list) and val else val
 except Exception:
-    # Для старіших версій Streamlit
-    public_user_id = st.experimental_get_query_params().get("user", [None])[0]
+    try:
+        # Спроба отримати параметр старим способом
+        val = st.experimental_get_query_params().get("user", [None])
+        public_user_id = val[0] if val else None
+    except Exception:
+        pass
 
 if public_user_id:
-    # Якщо в URL є ?user=..., показуємо ТІЛЬКИ публічний сайт
- def render_public_site(user_id: str):
-     st.set_page_config(page_title="SmartLink", layout="wide", page_icon="🔗")
+    # 1. Налаштовуємо сторінку
+    st.set_page_config(page_title="SmartLink", layout="wide", page_icon="🔗")
     
-    # Завантажуємо профіль
-     profile = db.load_profile(user_id)
-     if not profile:
-        st.error("❌ Цей сайт не знайдено або він видалений.")
-        return
+    # 2. Завантажуємо дані
+    profile = db.load_profile(public_user_id)
+    if not profile:
+        st.error(f"❌ Цей сайт не знайдено або він видалений. (ID: {public_user_id})")
+        st.stop()
     
-    # Завантажуємо посилання та товари з окремих таблиць
-     links = db.load_links(user_id) or []
-     products = db.load_products(user_id) or []
+    links = db.load_links(public_user_id) or []
+    products = db.load_products(public_user_id) or []
     
-    # Розпаковуємо повну конфігурацію з JSON
-     config = {}
-     if profile.get('site_config'):
-        import json
+    import json
+    config = {}
+    if profile.get('site_config'):
         try:
             config = json.loads(profile['site_config'])
         except Exception:
-            pass # Якщо JSON пошкоджений, використовуємо значення за замовчуванням
+            pass
 
-    # Генеруємо HTML з РЕАЛЬНИМИ даними
-     html_content = generate_full_html(
+    # 3. Генеруємо HTML з РЕАЛЬНИМИ даними
+    html_content = generate_full_html(
         name=profile.get('name', config.get('name', 'SmartLink')),
         bio=profile.get('bio', config.get('bio', '')),
         avatar_image_data_uri=profile.get('avatar_url', config.get('avatar_image_data_uri', '')),
@@ -1333,8 +1337,6 @@ if public_user_id:
         theme_choice=profile.get('theme_choice', config.get('theme_choice', 'gradient')),
         font_choice=profile.get('font_choice', config.get('font_choice', 'Inter')),
         dark_mode=profile.get('dark_mode', config.get('dark_mode', False)),
-        
-        # Тепер беремо з config, а не порожні значення!
         faq_items=config.get('faq_items', []),
         countdown_date=config.get('countdown_date', ''),
         countdown_title=config.get('countdown_title', 'До події залишилось'),
@@ -1348,14 +1350,13 @@ if public_user_id:
         contact_title=config.get('contact_title', ''),
         contact_info=config.get('contact_info', ''),
         products=products,
-        
         supabase_url=os.getenv('SUPABASE_URL', 'https://nwuijdpamsijypmviwra.supabase.co'),
         supabase_anon_key=os.getenv('SUPABASE_KEY', ''),
-        profile_id=str(user_id)
+        profile_id=str(public_user_id)
     )
     
-    # Прибираємо відступи Streamlit для повноекранного режиму
-     st.markdown(
+    # 4. Прибираємо відступи Streamlit для повноекранного режиму
+    st.markdown(
         """
         <style>
         .block-container { padding-top: 0rem; padding-bottom: 0rem; padding-left: 0rem; padding-right: 0rem; max-width: 100%; }
@@ -1366,10 +1367,9 @@ if public_user_id:
         unsafe_allow_html=True
     )
     
-     st.components.v1.html(html_content, height=1000, scrolling=True)
-    # Запускаємо рендер і зупиняємо виконання решти коду (адмінки)
-     render_public_site(public_user_id)
-     st.stop() # <-- ЦЕ ДУЖЕ ВАЖЛИВО: зупиняє завантаження адмін-панелі
+    # 5. Відображаємо сайт і ЗУПИНЯЄМО виконання решти коду (адмінки)
+    st.components.v1.html(html_content, height=1000, scrolling=True)
+    st.stop()
 
 # ============================================================================
 # ОСНОВНИЙ ІНТЕРФЕЙС STREAMLIT
