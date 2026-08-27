@@ -178,10 +178,15 @@ def get_theme_styles(theme: str, color: str) -> Dict:
 def save_config_to_supabase(user_id: str):
     """Зберігає ВСЮ конфігурацію користувача в Supabase."""
     try:
-        # 1. Збираємо повну конфігурацію як JSON (вже містить GIF, фон, цитати тощо)
-        full_config_json = export_config()
+        import json # Переконайтеся, що json імпортовано
         
-        # 2. Формуємо дані профілю
+        # 1. Отримуємо JSON як рядок (для експорту в файл)
+        full_config_json_string = export_config()
+        
+        # 2. 🔑 КРИТИЧНО ВАЖЛИВО: Перетворюємо рядок назад у словник Python для Supabase!
+        full_config_dict = json.loads(full_config_json_string)
+        
+        # 3. Формуємо дані профілю
         profile_data = {
             'name': st.session_state.get('name_value', ''),
             'bio': st.session_state.get('bio_value', ''),
@@ -192,11 +197,15 @@ def save_config_to_supabase(user_id: str):
             'dark_mode': st.session_state.get('dark_mode_value', False),
             'avatar_url': st.session_state.get('avatar_image_data_uri', ''),
             'background_url': st.session_state.get('background_image_data_uri', ''),
-            'site_config': full_config_json  # <-- ЗБЕРІГАЄМО ВСЕ ТУТ
+            'site_config': full_config_dict  # <-- ТЕПЕР ТУТ СЛОВНИК, А НЕ РЯДОК!
         }
+        
+        # Тимчасова діагностика
+        print(f"🔍 ЗБЕРЕЖЕННЯ: site_config містить GIF? {'Так' if 'gif_url' in full_config_dict else 'Ні'}")
+        
         db.save_profile(user_id, profile_data)
         
-        # 3. Зберігаємо посилання та товари окремо (для зручності оновлення)
+        # Зберігаємо посилання та товари
         links = st.session_state.get('links_list', [])
         db.save_links(user_id, links)
         
@@ -206,43 +215,6 @@ def save_config_to_supabase(user_id: str):
         return True
     except Exception as e:
         print(f"Помилка збереження в Supabase: {e}")
-        return False
-
-def load_config_from_supabase(user_id: str):
-    """
-    Завантажує конфігурацію користувача з Supabase.
-    """
-    try:
-        # Завантажуємо профіль
-        profile = db.load_profile(user_id)
-        if profile:
-            st.session_state['name_value'] = profile.get('name', '')
-            st.session_state['bio_value'] = profile.get('bio', '')
-            st.session_state['telegram_chat_id_value'] = profile.get('telegram_chat_id', '')  # <-- ДОДАНО
-            st.session_state['theme_choice_value'] = profile.get('theme_choice', 'gradient')
-            st.session_state['theme_color_value'] = profile.get('theme_color', '#667eea')
-            st.session_state['font_choice_value'] = profile.get('font_choice', 'Inter')
-            st.session_state['dark_mode_value'] = profile.get('dark_mode', False)
-            st.session_state['avatar_image_data_uri'] = profile.get('avatar_url', '')
-            st.session_state['background_image_data_uri'] = profile.get('background_url', '')
-        
-        # Завантажуємо посилання
-        links = db.load_links(user_id)
-        st.session_state.links_list = links
-        
-                # Завантажуємо товари
-        products = db.load_products(user_id)
-        
-        # Виправляємо MIME-типи зображень
-        for prod in products:
-            if prod.get('image_url'):
-                prod['image_url'] = fix_image_mime_type(prod['image_url'])
-        
-        st.session_state.products = products
-        
-        return True
-    except Exception as e:
-        print(f"Помилка завантаження з Supabase: {e}")
         return False
 
 def export_config():
@@ -1293,23 +1265,19 @@ def generate_full_html(name, bio, avatar_image_data_uri, links, theme_color, the
 # ============================================================================
 public_user_id = None
 try:
-    # Спроба отримати параметр сучасним способом
     params = st.query_params
     val = params.get("user")
     public_user_id = val[0] if isinstance(val, list) and val else val
 except Exception:
     try:
-        # Спроба отримати параметр старим способом
         val = st.experimental_get_query_params().get("user", [None])
         public_user_id = val[0] if val else None
     except Exception:
         pass
 
 if public_user_id:
-    # 1. Налаштовуємо сторінку
     st.set_page_config(page_title="SmartLink", layout="wide", page_icon="🔗")
     
-    # 2. Завантажуємо дані
     profile = db.load_profile(public_user_id)
     if not profile:
         st.error(f"❌ Цей сайт не знайдено або він видалений. (ID: {public_user_id})")
@@ -1326,7 +1294,7 @@ if public_user_id:
         except Exception:
             pass
 
-    # 3. Генеруємо HTML з РЕАЛЬНИМИ даними (ІДЕАЛЬНІ ВІДСТУПИ)
+    # УВАГА: Цей рядок має починатися з рівно 4 пробілів від початку рядка!
     html_content = generate_full_html(
         name=profile.get('name') or config.get('name', 'SmartLink'),
         bio=profile.get('bio') or config.get('bio', ''),
@@ -1355,7 +1323,6 @@ if public_user_id:
         profile_id=str(public_user_id)
     )
     
-    # 4. Прибираємо відступи Streamlit для повноекранного режиму
     st.markdown(
         """
         <style>
@@ -1367,7 +1334,6 @@ if public_user_id:
         unsafe_allow_html=True
     )
     
-    # 5. Відображаємо сайт і ЗУПИНЯЄМО виконання решти коду (адмінки)
     st.components.v1.html(html_content, height=1000, scrolling=True)
     st.stop()
 

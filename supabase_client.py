@@ -124,9 +124,11 @@ def get_current_user() -> Optional[Dict[str, Any]]:
 def save_profile(user_id: str, profile_data: Dict[str, Any]) -> bool:
     """
     Зберігає або оновлює профіль користувача.
-    profile_data має містити: name, bio, avatar_url, theme_choice, theme_color, font_choice, dark_mode, telegram_chat_id
     """
     try:
+        # 🔍 ДІАГНОСТИКА: Друкуємо в консоль, що ми отримуємо
+        print(f"💾 save_profile отримав site_config: {'Так' if 'site_config' in profile_data and profile_data['site_config'] else 'Ні (NULL)'}")
+        
         # Спочатку пробуємо оновити
         response = supabase.table('profiles').update(profile_data).eq('id', user_id).execute()
         
