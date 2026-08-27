@@ -97,6 +97,69 @@ BIO_TEMPLATES = {
 CONFIG_FILE = "last_config.json"
 
 # ============================================================================
+# ПЕРЕВІРКА: Чи це публічне посилання користувача?
+# ============================================================================
+try:
+    # Для сучасних версій Streamlit (>= 1.23)
+    public_user_id = st.query_params.get("user")
+except Exception:
+    # Для старіших версій Streamlit
+    public_user_id = st.experimental_get_query_params().get("user", [None])[0]
+
+if public_user_id:
+    # Якщо в URL є ?user=..., показуємо ТІЛЬКИ публічний сайт
+    def render_public_site(user_id: str):
+        st.set_page_config(page_title="SmartLink", layout="wide", page_icon="🔗")
+        
+        # Завантажуємо дані з бази
+        profile = db.load_profile(user_id)
+        if not profile:
+            st.error("❌ Цей сайт не знайдено або він видалений.")
+            return
+        
+        links = db.load_links(user_id) or []
+        products = db.load_products(user_id) or []
+        
+        # Генеруємо HTML (використовуємо безпечні значення за замовчуванням для додаткових блоків)
+        html_content = generate_full_html(
+            name=profile.get('name', 'SmartLink'),
+            bio=profile.get('bio', ''),
+            avatar_image_data_uri=profile.get('avatar_url', ''),
+            links=links,
+            theme_color=profile.get('theme_color', '#667eea'),
+            theme_choice=profile.get('theme_choice', 'gradient'),
+            font_choice=profile.get('font_choice', 'Inter'),
+            dark_mode=profile.get('dark_mode', False),
+            background_image_data_uri=profile.get('background_url', ''),
+            faq_items=[], countdown_date='', countdown_title='', custom_html='',
+            gif_url='', gif_caption='', quote_text='', quote_author='',
+            features=[], gallery_images=[], contact_title='', contact_info='',
+            products=products,
+            supabase_url=os.getenv('SUPABASE_URL', 'https://nwuijdpamsijypmviwra.supabase.co'),
+            supabase_anon_key=os.getenv('SUPABASE_KEY', ''),
+            profile_id=str(user_id)
+        )
+        
+        # Прибираємо відступи Streamlit, щоб сайт виглядав як справжня веб-сторінка
+        st.markdown(
+            """
+            <style>
+            .block-container { padding-top: 0rem; padding-bottom: 0rem; padding-left: 0rem; padding-right: 0rem; max-width: 100%; }
+            .main .block-container { max-width: 100%; padding: 0; }
+            iframe { border: none; width: 100vw; height: 100vh; }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+        
+        # Відображаємо сайт на весь екран
+        st.components.v1.html(html_content, height=1000, scrolling=True)
+
+    # Запускаємо рендер і зупиняємо виконання решти коду (адмінки)
+    render_public_site(public_user_id)
+    st.stop() # <-- ЦЕ ДУЖЕ ВАЖЛИВО: зупиняє завантаження адмін-панелі
+
+# ============================================================================
 # ДОПОМІЖНІ ФУНКЦІЇ
 # ============================================================================
 
@@ -1582,28 +1645,45 @@ with tab1:
         elif not st.session_state.links_list:
             st.error("Будь ласка, додай хоча б одне посилання!")
         else:
-            final_bio = st.session_state.get('generated_bio', bio) if 'generated_bio' in st.session_state else bio
-            html_content = generate_full_html(
-                name=name, bio=final_bio, avatar_image_data_uri=avatar_image_data_uri,
-                links=st.session_state.links_list, theme_color=theme_color, theme_choice=theme_choice,
-                font_choice=font_choice, dark_mode=dark_mode, background_image_data_uri=background_image_data_uri,
-                faq_items=st.session_state.get('faq_items', []), countdown_date=st.session_state.get('countdown_date', ''),
-                countdown_title=st.session_state.get('countdown_title', 'До події залишилось'), custom_html=st.session_state.get('custom_html', ''),
-                gif_url=st.session_state.get('gif_url', ''), gif_caption=st.session_state.get('gif_caption', ''),
-                quote_text=st.session_state.get('quote_text', ''), quote_author=st.session_state.get('quote_author', ''),
-                features=st.session_state.get('features', []), gallery_images=st.session_state.get('gallery_images', []),
-                contact_title=st.session_state.get('contact_title', ''), contact_info=st.session_state.get('contact_info', ''),
-                products=st.session_state.get('products', []),
-                supabase_url=os.getenv('SUPABASE_URL'),
-                supabase_anon_key=os.getenv('SUPABASE_KEY'),
-                profile_id=str(st.session_state.user_id)
-            )
-            with open("my_site.html", "w", encoding="utf-8") as f:
-                f.write(html_content)
-            st.success("✅ Твій сайт створено!")
-            st.download_button(label="📥 Завантажити HTML файл", data=html_content, file_name="my_site.html", mime="text/html")
-            st.subheader("👀 Прев'ю:")
-            st.components.v1.html(html_content, height=600, scrolling=True)
+            with st.spinner("🚀 Публікуємо ваш сайт..."):
+                # Зберігаємо все в базу даних
+                save_config_to_supabase(st.session_state.user_id)
+                
+                final_bio = st.session_state.get('generated_bio', bio) if 'generated_bio' in st.session_state else bio
+                
+                # Генеруємо HTML для попереднього перегляду
+                html_content = generate_full_html(
+                    name=name, bio=final_bio, avatar_image_data_uri=avatar_image_data_uri,
+                    links=st.session_state.links_list, theme_color=theme_color, theme_choice=theme_choice,
+                    font_choice=font_choice, dark_mode=dark_mode, background_image_data_uri=background_image_data_uri,
+                    faq_items=st.session_state.get('faq_items', []), countdown_date=st.session_state.get('countdown_date', ''),
+                    countdown_title=st.session_state.get('countdown_title', 'До події залишилось'), custom_html=st.session_state.get('custom_html', ''),
+                    gif_url=st.session_state.get('gif_url', ''), gif_caption=st.session_state.get('gif_caption', ''),
+                    quote_text=st.session_state.get('quote_text', ''), quote_author=st.session_state.get('quote_author', ''),
+                    features=st.session_state.get('features', []), gallery_images=st.session_state.get('gallery_images', []),
+                    contact_title=st.session_state.get('contact_title', ''), contact_info=st.session_state.get('contact_info', ''),
+                    products=st.session_state.get('products', []),
+                    supabase_url=os.getenv('SUPABASE_URL', 'https://nwuijdpamsijypmviwra.supabase.co'),
+                    supabase_anon_key=os.getenv('SUPABASE_KEY', ''),
+                    profile_id=str(st.session_state.user_id)
+                )
+                
+                # Формуємо справжнє публічне посилання
+                # УВАГА: Якщо ваш додаток називається інакше, замініть 'smartlinks' на вашу реальну назву
+                public_url = f"https://smartlinks.streamlit.app/?user={st.session_state.user_id}"
+                
+                st.balloons()
+                st.success("✅ Ваш сайт успішно збережено та опубліковано в інтернеті!")
+                
+                st.markdown(f"""
+                ### 🔗 Ваше публічне посилання:
+                [{public_url}]({public_url})
+                
+                💡 *Скопіюйте це посилання та відкрийте його в новій вкладці (або на телефоні), щоб побачити, як ваш сайт виглядає для відвідувачів.*
+                """)
+                
+                st.subheader("👀 Попередній перегляд:")
+                st.components.v1.html(html_content, height=600, scrolling=True)
 
     # ========================================================================
     # ЕКСПОРТ / ІМПОРТ / ОЧИЩЕННЯ
