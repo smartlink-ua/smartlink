@@ -176,30 +176,30 @@ def get_theme_styles(theme: str, color: str) -> Dict:
 # ============================================================================
 
 def save_config_to_supabase(user_id: str):
-    """
-    Зберігає конфігурацію користувача в Supabase.
-    """
+    """Зберігає ВСЮ конфігурацію користувача в Supabase."""
     try:
-        # Зберігаємо профіль
+        # 1. Збираємо повну конфігурацію як JSON (вже містить GIF, фон, цитати тощо)
+        full_config_json = export_config()
         
+        # 2. Формуємо дані профілю
         profile_data = {
             'name': st.session_state.get('name_value', ''),
             'bio': st.session_state.get('bio_value', ''),
-            'telegram_chat_id': st.session_state.get('telegram_chat_id_value', ''),  # <-- ДОДАНО
+            'telegram_chat_id': st.session_state.get('telegram_chat_id_value', ''),
             'theme_choice': st.session_state.get('theme_choice_value', 'gradient'),
             'theme_color': st.session_state.get('theme_color_value', '#667eea'),
             'font_choice': st.session_state.get('font_choice_value', 'Inter'),
             'dark_mode': st.session_state.get('dark_mode_value', False),
             'avatar_url': st.session_state.get('avatar_image_data_uri', ''),
             'background_url': st.session_state.get('background_image_data_uri', ''),
+            'site_config': full_config_json  # <-- ЗБЕРІГАЄМО ВСЕ ТУТ
         }
         db.save_profile(user_id, profile_data)
         
-        # Зберігаємо посилання
+        # 3. Зберігаємо посилання та товари окремо (для зручності оновлення)
         links = st.session_state.get('links_list', [])
         db.save_links(user_id, links)
         
-        # Зберігаємо товари
         products = st.session_state.get('products', [])
         db.save_products(user_id, products)
         
@@ -1300,56 +1300,76 @@ except Exception:
 
 if public_user_id:
     # Якщо в URL є ?user=..., показуємо ТІЛЬКИ публічний сайт
-    def render_public_site(user_id: str):
-        st.set_page_config(page_title="SmartLink", layout="wide", page_icon="🔗")
-        
-        # Завантажуємо дані з бази
-        profile = db.load_profile(user_id)
-        if not profile:
-            st.error("❌ Цей сайт не знайдено або він видалений.")
-            return
-        
-        links = db.load_links(user_id) or []
-        products = db.load_products(user_id) or []
-        
-        # Генеруємо HTML (використовуємо безпечні значення за замовчуванням для додаткових блоків)
-        html_content = generate_full_html(
-            name=profile.get('name', 'SmartLink'),
-            bio=profile.get('bio', ''),
-            avatar_image_data_uri=profile.get('avatar_url', ''),
-            links=links,
-            theme_color=profile.get('theme_color', '#667eea'),
-            theme_choice=profile.get('theme_choice', 'gradient'),
-            font_choice=profile.get('font_choice', 'Inter'),
-            dark_mode=profile.get('dark_mode', False),
-            background_image_data_uri=profile.get('background_url', ''),
-            faq_items=[], countdown_date='', countdown_title='', custom_html='',
-            gif_url='', gif_caption='', quote_text='', quote_author='',
-            features=[], gallery_images=[], contact_title='', contact_info='',
-            products=products,
-            supabase_url=os.getenv('SUPABASE_URL', 'https://nwuijdpamsijypmviwra.supabase.co'),
-            supabase_anon_key=os.getenv('SUPABASE_KEY', ''),
-            profile_id=str(user_id)
-        )
-        
-        # Прибираємо відступи Streamlit, щоб сайт виглядав як справжня веб-сторінка
-        st.markdown(
-            """
-            <style>
-            .block-container { padding-top: 0rem; padding-bottom: 0rem; padding-left: 0rem; padding-right: 0rem; max-width: 100%; }
-            .main .block-container { max-width: 100%; padding: 0; }
-            iframe { border: none; width: 100vw; height: 100vh; }
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-        
-        # Відображаємо сайт на весь екран
-        st.components.v1.html(html_content, height=1000, scrolling=True)
+ def render_public_site(user_id: str):
+     st.set_page_config(page_title="SmartLink", layout="wide", page_icon="🔗")
+    
+    # Завантажуємо профіль
+     profile = db.load_profile(user_id)
+     if not profile:
+        st.error("❌ Цей сайт не знайдено або він видалений.")
+        return
+    
+    # Завантажуємо посилання та товари з окремих таблиць
+     links = db.load_links(user_id) or []
+     products = db.load_products(user_id) or []
+    
+    # Розпаковуємо повну конфігурацію з JSON
+     config = {}
+     if profile.get('site_config'):
+        import json
+        try:
+            config = json.loads(profile['site_config'])
+        except Exception:
+            pass # Якщо JSON пошкоджений, використовуємо значення за замовчуванням
 
+    # Генеруємо HTML з РЕАЛЬНИМИ даними
+     html_content = generate_full_html(
+        name=profile.get('name', config.get('name', 'SmartLink')),
+        bio=profile.get('bio', config.get('bio', '')),
+        avatar_image_data_uri=profile.get('avatar_url', config.get('avatar_image_data_uri', '')),
+        background_image_data_uri=profile.get('background_url', config.get('background_image_data_uri', '')),
+        links=links,
+        theme_color=profile.get('theme_color', config.get('theme_color', '#667eea')),
+        theme_choice=profile.get('theme_choice', config.get('theme_choice', 'gradient')),
+        font_choice=profile.get('font_choice', config.get('font_choice', 'Inter')),
+        dark_mode=profile.get('dark_mode', config.get('dark_mode', False)),
+        
+        # Тепер беремо з config, а не порожні значення!
+        faq_items=config.get('faq_items', []),
+        countdown_date=config.get('countdown_date', ''),
+        countdown_title=config.get('countdown_title', 'До події залишилось'),
+        custom_html=config.get('custom_html', ''),
+        gif_url=config.get('gif_url', ''),
+        gif_caption=config.get('gif_caption', ''),
+        quote_text=config.get('quote_text', ''),
+        quote_author=config.get('quote_author', ''),
+        features=config.get('features', []),
+        gallery_images=config.get('gallery_images', []),
+        contact_title=config.get('contact_title', ''),
+        contact_info=config.get('contact_info', ''),
+        products=products,
+        
+        supabase_url=os.getenv('SUPABASE_URL', 'https://nwuijdpamsijypmviwra.supabase.co'),
+        supabase_anon_key=os.getenv('SUPABASE_KEY', ''),
+        profile_id=str(user_id)
+    )
+    
+    # Прибираємо відступи Streamlit для повноекранного режиму
+     st.markdown(
+        """
+        <style>
+        .block-container { padding-top: 0rem; padding-bottom: 0rem; padding-left: 0rem; padding-right: 0rem; max-width: 100%; }
+        .main .block-container { max-width: 100%; padding: 0; }
+        iframe { border: none; width: 100vw; height: 100vh; }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+    
+     st.components.v1.html(html_content, height=1000, scrolling=True)
     # Запускаємо рендер і зупиняємо виконання решти коду (адмінки)
-    render_public_site(public_user_id)
-    st.stop() # <-- ЦЕ ДУЖЕ ВАЖЛИВО: зупиняє завантаження адмін-панелі
+     render_public_site(public_user_id)
+     st.stop() # <-- ЦЕ ДУЖЕ ВАЖЛИВО: зупиняє завантаження адмін-панелі
 
 # ============================================================================
 # ОСНОВНИЙ ІНТЕРФЕЙС STREAMLIT
