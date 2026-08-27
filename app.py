@@ -1327,21 +1327,23 @@ if public_user_id:
             pass
 
     # 3. Генеруємо HTML з РЕАЛЬНИМИ даними
-    html_content = generate_full_html(
-        name=profile.get('name', config.get('name', 'SmartLink')),
-        bio=profile.get('bio', config.get('bio', '')),
-        avatar_image_data_uri=profile.get('avatar_url', config.get('avatar_image_data_uri', '')),
-        background_image_data_uri=profile.get('background_url', config.get('background_image_data_uri', '')),
+        html_content = generate_full_html(
+        name=profile.get('name') or config.get('name', 'SmartLink'),
+        bio=profile.get('bio') or config.get('bio', ''),
+        avatar_image_data_uri=profile.get('avatar_url') or config.get('avatar_image_data_uri', ''),
+        background_image_data_uri=profile.get('background_url') or config.get('background_image_data_uri', ''), # ✅ ВИПРАВЛЕНО
         links=links,
-        theme_color=profile.get('theme_color', config.get('theme_color', '#667eea')),
-        theme_choice=profile.get('theme_choice', config.get('theme_choice', 'gradient')),
-        font_choice=profile.get('font_choice', config.get('font_choice', 'Inter')),
-        dark_mode=profile.get('dark_mode', config.get('dark_mode', False)),
+        theme_color=profile.get('theme_color') or config.get('theme_color', '#667eea'),
+        theme_choice=profile.get('theme_choice') or config.get('theme_choice', 'gradient'),
+        font_choice=profile.get('font_choice') or config.get('font_choice', 'Inter'),
+        dark_mode=profile.get('dark_mode') or config.get('dark_mode', False),
+        
+        # Ці дані зберігаються ТІЛЬКИ в config, тому беремо їх звідти
         faq_items=config.get('faq_items', []),
         countdown_date=config.get('countdown_date', ''),
         countdown_title=config.get('countdown_title', 'До події залишилось'),
         custom_html=config.get('custom_html', ''),
-        gif_url=config.get('gif_url', ''),
+        gif_url=config.get('gif_url', ''), # ✅ БЕРЕМ З CONFIG
         gif_caption=config.get('gif_caption', ''),
         quote_text=config.get('quote_text', ''),
         quote_author=config.get('quote_author', ''),
@@ -1350,6 +1352,7 @@ if public_user_id:
         contact_title=config.get('contact_title', ''),
         contact_info=config.get('contact_info', ''),
         products=products,
+        
         supabase_url=os.getenv('SUPABASE_URL', 'https://nwuijdpamsijypmviwra.supabase.co'),
         supabase_anon_key=os.getenv('SUPABASE_KEY', ''),
         profile_id=str(public_user_id)
