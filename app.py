@@ -11,7 +11,7 @@ from typing import List, Dict, Optional
 # ============================================================================
 
 PAGE_CONFIG = {
-    "page_title": "MSSG Clone - Конструктор сайтів",
+    "page_title": "SmartLink - Конструктор сайтів",
     "layout": "wide"
 }
 
@@ -1379,7 +1379,7 @@ if 'user_id' not in st.session_state:
     st.session_state.user_id = None
 
 if not st.session_state.user_id:
-    st.title("🔐 Вхід у MSSG Clone")
+    st.title("🔐 Вхід у SmartLink")
     st.write("Ласкаво просимо! Увійдіть або зареєструйтеся, щоб почати.")
     
     tab_login, tab_register = st.tabs(["🔑 Вхід", "📝 Реєстрація"])
@@ -1429,7 +1429,7 @@ if not st.session_state.user_id:
 # ЯКЩО КОРИСТУВАЧ УВІЙШОВ, ПОКАЗУЄМО ОСНОВНИЙ ІНТЕРФЕЙС
 # ============================================================================
 
-st.title("🚀 MSSG Clone")
+st.title("🚀 SmartLink")
 st.subheader(f"Вітаємо! Ви увійшли як: {st.session_state.user_id[:8]}...")
 
 # Кнопка виходу
