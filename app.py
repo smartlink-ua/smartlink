@@ -97,69 +97,6 @@ BIO_TEMPLATES = {
 CONFIG_FILE = "last_config.json"
 
 # ============================================================================
-# ПЕРЕВІРКА: Чи це публічне посилання користувача?
-# ============================================================================
-try:
-    # Для сучасних версій Streamlit (>= 1.23)
-    public_user_id = st.query_params.get("user")
-except Exception:
-    # Для старіших версій Streamlit
-    public_user_id = st.experimental_get_query_params().get("user", [None])[0]
-
-if public_user_id:
-    # Якщо в URL є ?user=..., показуємо ТІЛЬКИ публічний сайт
-    def render_public_site(user_id: str):
-        st.set_page_config(page_title="SmartLink", layout="wide", page_icon="🔗")
-        
-        # Завантажуємо дані з бази
-        profile = db.load_profile(user_id)
-        if not profile:
-            st.error("❌ Цей сайт не знайдено або він видалений.")
-            return
-        
-        links = db.load_links(user_id) or []
-        products = db.load_products(user_id) or []
-        
-        # Генеруємо HTML (використовуємо безпечні значення за замовчуванням для додаткових блоків)
-        html_content = generate_full_html(
-            name=profile.get('name', 'SmartLink'),
-            bio=profile.get('bio', ''),
-            avatar_image_data_uri=profile.get('avatar_url', ''),
-            links=links,
-            theme_color=profile.get('theme_color', '#667eea'),
-            theme_choice=profile.get('theme_choice', 'gradient'),
-            font_choice=profile.get('font_choice', 'Inter'),
-            dark_mode=profile.get('dark_mode', False),
-            background_image_data_uri=profile.get('background_url', ''),
-            faq_items=[], countdown_date='', countdown_title='', custom_html='',
-            gif_url='', gif_caption='', quote_text='', quote_author='',
-            features=[], gallery_images=[], contact_title='', contact_info='',
-            products=products,
-            supabase_url=os.getenv('SUPABASE_URL', 'https://nwuijdpamsijypmviwra.supabase.co'),
-            supabase_anon_key=os.getenv('SUPABASE_KEY', ''),
-            profile_id=str(user_id)
-        )
-        
-        # Прибираємо відступи Streamlit, щоб сайт виглядав як справжня веб-сторінка
-        st.markdown(
-            """
-            <style>
-            .block-container { padding-top: 0rem; padding-bottom: 0rem; padding-left: 0rem; padding-right: 0rem; max-width: 100%; }
-            .main .block-container { max-width: 100%; padding: 0; }
-            iframe { border: none; width: 100vw; height: 100vh; }
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-        
-        # Відображаємо сайт на весь екран
-        st.components.v1.html(html_content, height=1000, scrolling=True)
-
-    # Запускаємо рендер і зупиняємо виконання решти коду (адмінки)
-    render_public_site(public_user_id)
-    st.stop() # <-- ЦЕ ДУЖЕ ВАЖЛИВО: зупиняє завантаження адмін-панелі
-
-# ============================================================================
 # ДОПОМІЖНІ ФУНКЦІЇ
 # ============================================================================
 
@@ -1351,6 +1288,68 @@ def generate_full_html(name, bio, avatar_image_data_uri, links, theme_color, the
     </script>
 </body>
 </html>"""
+# ============================================================================
+# ПЕРЕВІРКА: Чи це публічне посилання користувача?
+# ============================================================================
+try:
+    # Для сучасних версій Streamlit (>= 1.23)
+    public_user_id = st.query_params.get("user")
+except Exception:
+    # Для старіших версій Streamlit
+    public_user_id = st.experimental_get_query_params().get("user", [None])[0]
+
+if public_user_id:
+    # Якщо в URL є ?user=..., показуємо ТІЛЬКИ публічний сайт
+    def render_public_site(user_id: str):
+        st.set_page_config(page_title="SmartLink", layout="wide", page_icon="🔗")
+        
+        # Завантажуємо дані з бази
+        profile = db.load_profile(user_id)
+        if not profile:
+            st.error("❌ Цей сайт не знайдено або він видалений.")
+            return
+        
+        links = db.load_links(user_id) or []
+        products = db.load_products(user_id) or []
+        
+        # Генеруємо HTML (використовуємо безпечні значення за замовчуванням для додаткових блоків)
+        html_content = generate_full_html(
+            name=profile.get('name', 'SmartLink'),
+            bio=profile.get('bio', ''),
+            avatar_image_data_uri=profile.get('avatar_url', ''),
+            links=links,
+            theme_color=profile.get('theme_color', '#667eea'),
+            theme_choice=profile.get('theme_choice', 'gradient'),
+            font_choice=profile.get('font_choice', 'Inter'),
+            dark_mode=profile.get('dark_mode', False),
+            background_image_data_uri=profile.get('background_url', ''),
+            faq_items=[], countdown_date='', countdown_title='', custom_html='',
+            gif_url='', gif_caption='', quote_text='', quote_author='',
+            features=[], gallery_images=[], contact_title='', contact_info='',
+            products=products,
+            supabase_url=os.getenv('SUPABASE_URL', 'https://nwuijdpamsijypmviwra.supabase.co'),
+            supabase_anon_key=os.getenv('SUPABASE_KEY', ''),
+            profile_id=str(user_id)
+        )
+        
+        # Прибираємо відступи Streamlit, щоб сайт виглядав як справжня веб-сторінка
+        st.markdown(
+            """
+            <style>
+            .block-container { padding-top: 0rem; padding-bottom: 0rem; padding-left: 0rem; padding-right: 0rem; max-width: 100%; }
+            .main .block-container { max-width: 100%; padding: 0; }
+            iframe { border: none; width: 100vw; height: 100vh; }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+        
+        # Відображаємо сайт на весь екран
+        st.components.v1.html(html_content, height=1000, scrolling=True)
+
+    # Запускаємо рендер і зупиняємо виконання решти коду (адмінки)
+    render_public_site(public_user_id)
+    st.stop() # <-- ЦЕ ДУЖЕ ВАЖЛИВО: зупиняє завантаження адмін-панелі
 
 # ============================================================================
 # ОСНОВНИЙ ІНТЕРФЕЙС STREAMLIT
