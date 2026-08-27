@@ -216,7 +216,38 @@ def save_config_to_supabase(user_id: str):
     except Exception as e:
         print(f"Помилка збереження в Supabase: {e}")
         return False
-
+    
+def load_config_from_supabase(user_id: str):
+    """
+    Завантажує конфігурацію користувача з Supabase.
+    """
+    try:
+        profile = db.load_profile(user_id)
+        if profile:
+            st.session_state['name_value'] = profile.get('name', '')
+            st.session_state['bio_value'] = profile.get('bio', '')
+            st.session_state['telegram_chat_id_value'] = profile.get('telegram_chat_id', '')
+            st.session_state['theme_choice_value'] = profile.get('theme_choice', 'gradient')
+            st.session_state['theme_color_value'] = profile.get('theme_color', '#667eea')
+            st.session_state['font_choice_value'] = profile.get('font_choice', 'Inter')
+            st.session_state['dark_mode_value'] = profile.get('dark_mode', False)
+            st.session_state['avatar_image_data_uri'] = profile.get('avatar_url', '')
+            st.session_state['background_image_data_uri'] = profile.get('background_url', '')
+        
+        links = db.load_links(user_id)
+        st.session_state.links_list = links if links else []
+        
+        products = db.load_products(user_id) or []
+        for prod in products:
+            if prod.get('image_url'):
+                prod['image_url'] = fix_image_mime_type(prod['image_url'])
+        st.session_state.products = products
+        
+        return True
+    except Exception as e:
+        print(f"Помилка завантаження з Supabase: {e}")
+        return False
+    
 def export_config():
     config = {
         'name': st.session_state.get('name_value', ''),
