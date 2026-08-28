@@ -1459,8 +1459,8 @@ if not st.session_state.user_id:
                     result = db.register_user(reg_email, reg_password, reg_name)
                     if result['success']:
                         st.session_state.user_id = result['user_id']
-                        # Автоматично зберігаємо базовий профіль при реєстрації
-                        db.save_profile(st.session_state.user_id, {'name': reg_name, 'telegram_chat_id': '811492883'})
+                        # Автоматично зберігаємо базовий профіль при реєстрації (без чужого Telegram ID)
+                        db.save_profile(st.session_state.user_id, {'name': reg_name, 'telegram_chat_id': ''})
                         st.success("✅ Реєстрація успішна! Ласкаво просимо.")
                         st.rerun()
                     else:
@@ -1521,7 +1521,7 @@ with tab1:
     telegram_chat_id = st.text_input(
         "📱 Telegram Chat ID (для сповіщень про замовлення)", 
         value=st.session_state.get('telegram_chat_id_value', ''),
-        placeholder="Наприклад: 811492883",
+        placeholder="Наприклад: 811222873",
         help="Ваш ID у Telegram. Дізнатися можна у бота @userinfobot",
         key="telegram_chat_id_input_unique"  # <-- ДОДАНО ЦЕЙ РЯДОК
     )
