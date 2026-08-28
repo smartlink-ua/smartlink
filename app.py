@@ -277,7 +277,7 @@ def export_config():
         'font_choice': st.session_state.get('font_choice_value', 'Inter'),
         'dark_mode': st.session_state.get('dark_mode_value', False),
         'avatar_image_data_uri': st.session_state.get('avatar_image_data_uri', ''),
-        'background_image_data_uri': st.session_state.get('background_image_data_uri', ''),
+        # 'background_image_data_uri' видалено - зберігається окремо в background_url
         'links_list': st.session_state.get('links_list', []),
         'faq_items': st.session_state.get('faq_items', []),
         'countdown_date': st.session_state.get('countdown_date', ''),
@@ -294,7 +294,6 @@ def export_config():
         'products': st.session_state.get('products', []),
     }
     return json.dumps(config, ensure_ascii=False, indent=2)
-
 def import_config(json_string):
     try:
         config = json.loads(json_string)
@@ -1459,7 +1458,7 @@ if not st.session_state.user_id:
                     result = db.register_user(reg_email, reg_password, reg_name)
                     if result['success']:
                         st.session_state.user_id = result['user_id']
-                        # Автоматично зберігаємо базовий профіль при реєстрації (без чужого Telegram ID)
+                        # Автоматично зберігаємо базовий профіль при реєстрації
                         db.save_profile(st.session_state.user_id, {'name': reg_name, 'telegram_chat_id': ''})
                         st.success("✅ Реєстрація успішна! Ласкаво просимо.")
                         st.rerun()
