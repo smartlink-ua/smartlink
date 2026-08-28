@@ -429,8 +429,10 @@ def generate_products_block(products: List[Dict], theme_color: str) -> str:
     for idx, prod in enumerate(products):
         prod_id = prod.get('id', str(idx))
         
-        if prod.get('image'):
-            img_src = fix_image_mime_type(prod["image"])
+        # Підтримуємо як 'image' (з конструктора), так і 'image_url' (з бази даних)
+        prod_img = prod.get('image') or prod.get('image_url', '')
+        if prod_img:
+            img_src = fix_image_mime_type(prod_img)
             safe_title = prod['title'].replace("'", "\\'").replace('"', '\\"')
             img_html = f"""
             <div class="product-image-wrapper" 
@@ -1341,6 +1343,7 @@ if public_user_id:
     config = {}
     if profile.get('site_config'):
         try:
+            # Надійна перевірка: якщо це рядок, парсимо його. Якщо вже словник - використовуємо як є.
             config = json.loads(profile['site_config'])
         except Exception:
             pass
