@@ -737,7 +737,11 @@ def generate_full_html(name, bio, avatar_image_data_uri, links, theme_color, the
     theme_styles = get_theme_styles(theme_choice, theme_color)
     
     manifest = {
-        "name": name, "short_name": name[:12], "description": bio, "start_url": ".", "display": "standalone",
+        "name": name, 
+        "short_name": name[:12], 
+        "description": bio if bio else "🚀 SmartLink - створи свій сайт за 5 хвилин!", 
+        "start_url": ".", 
+        "display": "standalone",
         "background_color": theme_styles['bg'] if not str(theme_styles['bg']).startswith('linear') else "#ffffff",
         "theme_color": theme_color,
         "icons": [{"src": icon_data_uri, "sizes": "192x192", "type": "image/svg+xml", "purpose": "any maskable"}]
@@ -1343,10 +1347,16 @@ if public_user_id:
     config = {}
     if profile.get('site_config'):
         try:
-            # Надійна перевірка: якщо це рядок, парсимо його. Якщо вже словник - використовуємо як є.
-            config = json.loads(profile['site_config'])
-        except Exception:
-            pass
+            # Перевіряємо тип даних: якщо це текст, парсимо. Якщо вже словник - беремо як є.
+            if isinstance(profile['site_config'], str):
+                config = json.loads(profile['site_config'])
+            else:
+                config = profile['site_config']
+        except Exception as e:
+            print(f"Помилка читання JSON: {e}")
+            config = {}
+        # 🔍 ФІНАЛЬНИЙ ДЕТЕКТОР: Показує, що РЕАЛЬНО прийшло з бази даних
+    st.info(f"🔎 БАЗА ДАНИХ: GIF = '{config.get('gif_url', 'ПУСТО')[:40]}...' | Галерея = {len(config.get('gallery_images', []))} фото | Фон = {len(str(profile.get('background_url', '')))} символів")
 
     # УВАГА: Цей рядок має починатися з рівно 4 пробілів від початку рядка!
     html_content = generate_full_html(
