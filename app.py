@@ -1390,9 +1390,21 @@ if public_user_id:
     st.markdown(
         """
         <style>
+        /* Приховуємо ВСІ елементи Streamlit */
+        #MainMenu {visibility: hidden;}
+        header {visibility: hidden;}
+        footer {visibility: hidden;}
+        .stAppDeployButton {visibility: hidden;}
+        .viewerBadge {visibility: hidden;}
+        
+        /* Основні відступи */
         .block-container { padding-top: 0rem; padding-bottom: 0rem; padding-left: 0rem; padding-right: 0rem; max-width: 100%; }
         .main .block-container { max-width: 100%; padding: 0; }
         iframe { border: none; width: 100vw; height: 100vh; }
+        
+        /* Додаткове приховування */
+        .stDecoration {display: none;}
+        header[data-testid="stHeader"] {display: none;}
         </style>
         """,
         unsafe_allow_html=True
