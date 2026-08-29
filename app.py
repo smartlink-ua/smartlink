@@ -236,14 +236,14 @@ def save_config_to_supabase(user_id: str):
     except Exception as e:
         st.error(f"❌ Помилка збереження в Supabase: {e}")
         return False
-        
 def load_config_from_supabase(user_id: str):
     """
-    Завантажує конфігурацію користувача з Supabase.
+    Завантажує ВСЮ конфігурацію користувача з Supabase (включно з блоками).
     """
     try:
         profile = db.load_profile(user_id)
         if profile:
+            # Основні поля профілю
             st.session_state['name_value'] = profile.get('name', '')
             st.session_state['bio_value'] = profile.get('bio', '')
             st.session_state['telegram_chat_id_value'] = profile.get('telegram_chat_id', '')
@@ -253,15 +253,48 @@ def load_config_from_supabase(user_id: str):
             st.session_state['dark_mode_value'] = profile.get('dark_mode', False)
             st.session_state['avatar_image_data_uri'] = profile.get('avatar_url', '')
             st.session_state['background_image_data_uri'] = profile.get('background_url', '')
+            
+            # 🔑 КРИТИЧНО ВАЖЛИВО: Завантажуємо всі блоки з site_config
+            if profile.get('site_config'):
+                try:
+                    import json
+                    # Перевіряємо тип даних
+                    if isinstance(profile['site_config'], str):
+                        config = json.loads(profile['site_config'])
+                    else:
+                        config = profile['site_config']
+                    
+                    # Завантажуємо всі блоки в session_state
+                    st.session_state['faq_items'] = config.get('faq_items', [])
+                    st.session_state['countdown_date'] = config.get('countdown_date', '')
+                    st.session_state['countdown_title'] = config.get('countdown_title', 'До події залишилось')
+                    st.session_state['custom_html'] = config.get('custom_html', '')
+                    st.session_state['gif_url'] = config.get('gif_url', '')
+                    st.session_state['gif_caption'] = config.get('gif_caption', '')
+                    st.session_state['quote_text'] = config.get('quote_text', '')
+                    st.session_state['quote_author'] = config.get('quote_author', '')
+                    st.session_state['features'] = config.get('features', [])
+                    st.session_state['gallery_images'] = config.get('gallery_images', [])
+                    st.session_state['contact_title'] = config.get('contact_title', '')
+                    st.session_state['contact_info'] = config.get('contact_info', '')
+                    st.session_state['products'] = config.get('products', [])
+                    
+                    print(f"✅ Завантажено з site_config: GIF={bool(config.get('gif_url'))}, Галерея={len(config.get('gallery_images', []))}, Товари={len(config.get('products', []))}")
+                except Exception as e:
+                    print(f"❌ Помилка читання site_config: {e}")
         
+        # Завантажуємо посилання
         links = db.load_links(user_id)
         st.session_state.links_list = links if links else []
         
-        products = db.load_products(user_id) or []
-        for prod in products:
-            if prod.get('image_url'):
-                prod['image_url'] = fix_image_mime_type(prod['image_url'])
-        st.session_state.products = products
+        # Завантажуємо товари (якщо їх немає в site_config)
+        if 'products' not in st.session_state or not st.session_state.products:
+            products = db.load_products(user_id) or []
+            # Нормалізуємо поля товарів
+            for prod in products:
+                if prod.get('image_url'):
+                    prod['image'] = fix_image_mime_type(prod['image_url'])
+            st.session_state.products = products
         
         return True
     except Exception as e:
