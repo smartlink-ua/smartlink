@@ -378,3 +378,34 @@ def get_analytics(profile_id: str, days: int = 30) -> List[Dict[str, Any]]:
     except Exception as e:
         print(f"Помилка отримання аналітики: {e}")
         return []
+    
+    # ============================================================================
+# ВИДАЛЕННЯ ДАНИХ (Для повного очищення акаунту)
+# ============================================================================
+
+def delete_profile(user_id: str) -> bool:
+    """Видаляє профіль користувача"""
+    try:
+        supabase.table('profiles').delete().eq('id', user_id).execute()
+        return True
+    except Exception as e:
+        print(f"Помилка видалення профілю: {e}")
+        return False
+
+def delete_links(user_id: str) -> bool:
+    """Видаляє всі посилання користувача"""
+    try:
+        supabase.table('links').delete().eq('profile_id', user_id).execute()
+        return True
+    except Exception as e:
+        print(f"Помилка видалення посилань: {e}")
+        return False
+
+def delete_products(user_id: str) -> bool:
+    """Видаляє всі товари користувача"""
+    try:
+        supabase.table('products').delete().eq('profile_id', user_id).execute()
+        return True
+    except Exception as e:
+        print(f"Помилка видалення товарів: {e}")
+        return False

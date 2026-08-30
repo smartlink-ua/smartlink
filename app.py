@@ -1814,11 +1814,23 @@ with tab1:
     col_c1, col_c2, col_c3 = st.columns([1, 2, 1])
     with col_c2:
         if st.button("🗑️ Очистити всі дані та почати знову", type="secondary", use_container_width=True, key="clear_all_btn"):
-            if os.path.exists(CONFIG_FILE):
-                os.remove(CONFIG_FILE)
-            st.session_state.clear()
-            st.success("✅ Всі дані очищено! Оновіть сторінку (F5)")
-            st.rerun()
+         if st.session_state.user_id:
+            # Видаляємо дані з бази Supabase
+            db.delete_profile(st.session_state.user_id)
+            db.delete_links(st.session_state.user_id)
+            db.delete_products(st.session_state.user_id)
+            st.success("✅ Дані видалено з бази даних!")
+        
+        # Очищаємо локальні файли та сесію
+        if os.path.exists(CONFIG_FILE):
+            os.remove(CONFIG_FILE)
+        
+        st.session_state.clear()
+        st.session_state.user_id = None
+        st.session_state.config_loaded = False
+        
+        st.success("✅ Всі дані повністю очищено! Сторінка перезавантажиться...")
+        st.rerun()
 
 with tab2:
     st.header("🧩 Додаткові блоки")
