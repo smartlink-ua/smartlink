@@ -1815,27 +1815,28 @@ with tab1:
             except Exception as e:
                 st.error(f"❌ Помилка імпорту: {e}")
 
-    st.markdown("---")
+        st.markdown("---")
     col_c1, col_c2, col_c3 = st.columns([1, 2, 1])
     with col_c2:
         if st.button("🗑️ Очистити всі дані та почати знову", type="secondary", use_container_width=True, key="clear_all_btn"):
-         if st.session_state.user_id:
-            # Видаляємо дані з бази Supabase
-            db.delete_profile(st.session_state.user_id)
-            db.delete_links(st.session_state.user_id)
-            db.delete_products(st.session_state.user_id)
-            st.success("✅ Дані видалено з бази даних!")
-        
-        # Очищаємо локальні файли та сесію
-        if os.path.exists(CONFIG_FILE):
-            os.remove(CONFIG_FILE)
-        
-        st.session_state.clear()
-        st.session_state.user_id = None
-        st.session_state.config_loaded = False
-        
-        st.success("✅ Всі дані повністю очищено! Сторінка перезавантажиться...")
-        st.rerun()
+            # ⚠️ ВАЖЛИВО: Весь цей блок має бути з відступом всередині if st.button!
+            if st.session_state.user_id:
+                # Видаляємо дані з бази Supabase
+                db.delete_profile(st.session_state.user_id)
+                db.delete_links(st.session_state.user_id)
+                db.delete_products(st.session_state.user_id)
+                st.success("✅ Дані видалено з бази даних!")
+            
+            # Очищаємо локальні файли та сесію
+            if os.path.exists(CONFIG_FILE):
+                os.remove(CONFIG_FILE)
+            
+            st.session_state.clear()
+            st.session_state.user_id = None
+            st.session_state.config_loaded = False
+            
+            st.success("✅ Всі дані повністю очищено! Сторінка перезавантажиться...")
+            st.rerun()
 
 with tab2:
     st.header("🧩 Додаткові блоки")
