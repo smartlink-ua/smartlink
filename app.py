@@ -4,8 +4,7 @@ import base64
 import os
 import supabase_client as db
 from datetime import datetime
-from typing import List, Dict, Optional
-
+from typing import List, Dict, Optional, Any  # <-- ДОДАНО Any
 # ============================================================================
 # КОНФІГУРАЦІЯ
 # ============================================================================
@@ -879,8 +878,8 @@ def generate_full_html(name, bio, avatar_image_data_uri, links, theme_color, the
         window.SUPABASE_ANON_KEY = '{supabase_anon_key}';
         window.PROFILE_ID = '{profile_id}';
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/heatmap.js@2.0.5/build/heatmap.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/build/heatmap.min.js"></script>
+    
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
          body {{ font-family: '{font_choice}', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; {background_css} min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; position: relative; transition: background 0.3s ease; overflow-x: hidden; }}
@@ -903,8 +902,12 @@ def generate_full_html(name, bio, avatar_image_data_uri, links, theme_color, the
         .link.sortable-ghost {{ opacity: 0.4; }} .link.sortable-chosen {{ transform: scale(1.05); }}
         .drag-handle {{ position: absolute; left: 15px; top: 50%; transform: translateY(-50%); cursor: move; opacity: 0.6; }}
         .modal {{ display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10002; justify-content: center; align-items: center; }}
-        .modal.show {{ display: flex; }}
-        .modal-content {{ background: white; border-radius: 20px; padding: 40px; max-width: 400px; width: 90%; text-align: center; animation: modalSlide 0.3s ease; }}
+        .modal.show {{ display: flex; align-items: center; justify-content: center; padding: 20px; }}
+        .modal-content {{ 
+            background: white; border-radius: 20px; padding: 30px; max-width: 400px; width: 100%; 
+            text-align: center; animation: modalSlide 0.3s ease; 
+            max-height: 90vh; overflow-y: auto; position: relative;
+        }}
         @keyframes modalSlide {{ from {{ transform: translateY(-50px); opacity: 0; }} to {{ transform: translateY(0); opacity: 1; }} }}
         .modal-icon {{ font-size: 64px; margin-bottom: 20px; }} .modal-title {{ font-size: 24px; color: #333; margin-bottom: 10px; }}
         .modal-price {{ font-size: 36px; font-weight: 700; color: {theme_color}; margin: 20px 0; }}
@@ -1004,7 +1007,7 @@ def generate_full_html(name, bio, avatar_image_data_uri, links, theme_color, the
         .form-textarea {{ min-height: 100px; resize: vertical; }}
         .form-submit {{ background: {theme_color}; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: transform 0.2s; }}
         .form-submit:hover {{ transform: scale(1.02); }}
-        .form-info {{ margin-top: 10px; font-size: 12px; color: {theme_styles['text']}; opacity: 0.6; text-align: center; }}
+        .form-info {{ margin-top: 10px; font-size: 15px; color: {theme_styles['text']}; opacity: 1.0; text-align: center; font-weight: 600; }}
         .form-success {{ margin-top: 15px; padding: 15px; background: #d4edda; color: #155724; border-radius: 10px; text-align: center; }}
         .products-section {{ margin-top: 30px; }}
         .products-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; }}
@@ -1167,6 +1170,9 @@ def generate_full_html(name, bio, avatar_image_data_uri, links, theme_color, the
         <div class="links" id="linksContainer">{links_html}</div>
         {extra_blocks}
     </div>
+        <a href="https://share.streamlit.io/user/smartlink-ua" target="_blank" class="smartlink-badge">
+        🚀 SmartLink
+    </a>
     <div class="modal" id="paymentModal" role="dialog">
         <div class="modal-content">
             <div class="modal-icon">🔒</div>
@@ -1187,8 +1193,7 @@ def generate_full_html(name, bio, avatar_image_data_uri, links, theme_color, the
             <h3 id="productImageModalTitle" style="margin-top: 15px; color: {theme_styles['text']};"></h3>
         </div>
     </div>
-        <button class="heatmap-toggle" onclick="toggleHeatmap()">🔥 Статистика</button>
-        <button class="edit-mode-toggle" id="editModeBtn" onclick="toggleEditMode()">✏️ Редагування</button>
+        
         <div class="pwa-banner" id="pwaBanner">
         <img src="{icon_data_uri}" class="pwa-banner-icon" alt="icon" loading="lazy">
         <div class="pwa-banner-text"><strong>Додати на головний екран</strong>Швидкий доступ до {name}</div>
@@ -1286,18 +1291,6 @@ def generate_full_html(name, bio, avatar_image_data_uri, links, theme_color, the
             document.getElementById('lightbox').classList.add('show');
         }}
         function closeLightbox() {{ document.getElementById('lightbox').classList.remove('show'); }}
-        let sortableInstance = null, editMode = false;
-        function toggleEditMode() {{
-            editMode = !editMode;
-            const btn = document.getElementById('editModeBtn');
-            if (editMode) {{
-                btn.textContent = '✅ Завершити'; btn.classList.add('edit-mode-active');
-                if (!sortableInstance) sortableInstance = Sortable.create(document.getElementById('linksContainer'), {{ animation: 150, ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen', handle: '.drag-handle' }});
-            }} else {{
-                btn.textContent = '✏️ Редагування'; btn.classList.remove('edit-mode-active');
-                if (sortableInstance) {{ sortableInstance.destroy(); sortableInstance = null; }}
-            }}
-        }}
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => {{ e.preventDefault(); deferredPrompt = e; document.getElementById('pwaBanner').classList.add('show'); }});
         function installPWA() {{
@@ -1310,24 +1303,7 @@ def generate_full_html(name, bio, avatar_image_data_uri, links, theme_color, the
             if (body.classList.contains('dark-mode')) {{ body.classList.remove('dark-mode'); btn.textContent = '🌙'; localStorage.setItem('darkMode', 'false'); }}
             else {{ body.classList.add('dark-mode'); btn.textContent = '☀️'; localStorage.setItem('darkMode', 'true'); }}
         }}
-         var heatmapInstance = h337.create({{ container: document.getElementById('heatmap-container'), radius: 40, maxOpacity: 0.6, minOpacity: 0.1, gradient: {{ '.2': '#00ff00', '.5': '#ffff00', '.8': '#ff0000' }} }});
-        // Примусово встановлюємо розміри canvas
-        var canvas = document.querySelector('#heatmap-container canvas');
-        if (canvas) {{
-            canvas.style.position = 'fixed';
-            canvas.style.top = '0';
-            canvas.style.left = '0';
-            canvas.style.width = '100vw';
-            canvas.style.height = '100vh';
-        }}
-        document.addEventListener('click', function(e) {{
-            if (!e.target.closest('.link') && !e.target.closest('.product-btn')) {{
-                heatmapInstance.addData({{ x: e.pageX, y: e.pageY, value: 1 }});
-                clickData.push({{ x: e.pageX, y: e.pageY, time: new Date().toISOString() }});
-                localStorage.setItem('clickData', JSON.stringify(clickData));
-            }}
-        }});
-        if (clickData.length > 0) heatmapInstance.setData({{ max: 10, data: clickData.map(d => ({{ x: d.x, y: d.y, value: 1 }})) }});
+         
                 function toggleHeatmap() {{
             const container = document.getElementById('heatmap-container'), panel = document.getElementById('statsPanel');
             if (container.classList.contains('active')) {{
@@ -1439,7 +1415,7 @@ if public_user_id:
             print(f"Помилка читання JSON: {e}")
             config = {}
         # 🔍 ФІНАЛЬНИЙ ДЕТЕКТОР: Показує, що РЕАЛЬНО прийшло з бази даних
-    st.info(f"🔎 БАЗА ДАНИХ: GIF = '{config.get('gif_url', 'ПУСТО')[:40]}...' | Галерея = {len(config.get('gallery_images', []))} фото | Фон = {len(str(profile.get('background_url', '')))} символів")
+    
 
     # УВАГА: Цей рядок має починатися з рівно 4 пробілів від початку рядка!
     html_content = generate_full_html(
@@ -1488,6 +1464,19 @@ if public_user_id:
         /* Додаткове приховування */
         .stDecoration {display: none;}
         header[data-testid="stHeader"] {display: none;}
+                .smartlink-badge {
+            position: fixed; bottom: 20px; left: 20px; 
+            background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white; text-decoration: none; padding: 8px 16px; border-radius: 30px;
+            font-size: 13px; font-weight: 600; font-family: sans-serif;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: all 0.3s ease;
+            z-index: 10000; display: flex; align-items: center; gap: 6px;
+        }
+        .smartlink-badge:hover { transform: translateY(-3px); background: rgba(255, 255, 255, 0.25); }
+        body:not(.dark-mode) .smartlink-badge { 
+            background: rgba(0, 0, 0, 0.05); color: #333; border-color: rgba(0,0,0,0.1); 
+        }
         </style>
         """,
         unsafe_allow_html=True
@@ -2065,16 +2054,16 @@ with tab2:
             st.components.v1.html(custom_html, height=200)
     
     with st.expander("🎞️ GIF анімація"):
-     current_plan = get_user_plan_status(st.session_state.user_id)
-    if not current_plan['has_gif']:
-        st.warning("🔒 GIF-анімація доступна тільки на тарифі Pro. [Оновити тариф](#)")
-        st.stop() # Цей рядок зупиняє відображення всього, що йде нижче в цьому expander'і
-        gif_url = st.text_input("URL GIF", value=st.session_state.gif_url, placeholder="https://media.giphy.com/...")
-        st.session_state.gif_url = gif_url
-        gif_caption = st.text_input("Підпис", value=st.session_state.gif_caption)
-        st.session_state.gif_caption = gif_caption
-        if gif_url: st.image(gif_url, caption=gif_caption)
-
+        current_plan = get_user_plan_status(st.session_state.user_id)
+        if not current_plan['has_gif']:
+            st.warning("🔒 GIF-анімація доступна тільки на тарифі Pro. [Оновити тариф](#)")
+        else:
+            gif_url = st.text_input("URL GIF", value=st.session_state.gif_url, placeholder="https://media.giphy.com/...")
+            st.session_state.gif_url = gif_url
+            gif_caption = st.text_input("Підпис", value=st.session_state.gif_caption)
+            st.session_state.gif_caption = gif_caption
+            if gif_url: 
+                st.image(gif_url, caption=gif_caption)
 with tab3:
     st.header("📊 Статистика (демо)")
     st.info("💡 Статистика зберігається в браузері користувача.")
