@@ -171,6 +171,52 @@ def get_theme_styles(theme: str, color: str) -> Dict:
         styles[key] = value(color) if callable(value) else value
     return styles
 
+def get_user_plan_status(user_id: str) -> Dict[str, Any]:
+    """Визначає статус користувача згідно з новими правилами."""
+    try:
+        profile = db.load_profile(user_id)
+        if not profile:
+            return {'name': 'Free 🥉', 'links': 3, 'products': 2, 'has_gif': False, 'gallery_limit': 1, 'is_pro': False}
+        
+        plan = profile.get('plan', 'free')
+        trial_date_str = profile.get('trial_end_date')
+        
+        is_trial_active = False
+        if trial_date_str:
+            try:
+                if isinstance(trial_date_str, str):
+                    clean_date = trial_date_str.replace('Z', '+00:00')
+                    trial_date = datetime.fromisoformat(clean_date)
+                else:
+                    trial_date = trial_date_str
+                
+                if trial_date.tzinfo is None:
+                    now = datetime.now()
+                else:
+                    now = datetime.now(trial_date.tzinfo)
+                    
+                if trial_date > now:
+                    is_trial_active = True
+            except Exception:
+                pass
+
+        # 🥇 Unlimited
+        if plan == 'unlimited':
+            return {'name': 'Unlimited ', 'links': 9999, 'products': 9999, 'has_gif': True, 'gallery_limit': 9999, 'is_pro': True}
+        
+        # 🥈 Pro (включно з Trial)
+        elif plan == 'pro' or is_trial_active:
+            status_name = 'Pro (Trial 14 days) 🚀' if is_trial_active else 'Pro 🥈'
+            return {'name': status_name, 'links': 20, 'products': 15, 'has_gif': True, 'gallery_limit': 15, 'is_pro': True}
+        
+        # 🥉 Free (Ваші нові правила)
+        else:
+            return {'name': 'Free ', 'links': 3, 'products': 2, 'has_gif': False, 'gallery_limit': 1, 'is_pro': False}
+            
+    except Exception as e:
+        print(f"Помилка перевірки тарифу: {e}")
+        return {'name': 'Free 🥉', 'links': 3, 'products': 2, 'has_gif': False, 'gallery_limit': 1, 'is_pro': False}
+
 # ============================================================================
 # ЕКСПОРТ / ІМПОРТ КОНФІГУРАЦІЇ
 # ============================================================================
@@ -1527,6 +1573,22 @@ tab1, tab2, tab3, tab4 = st.tabs(["📝 Створити сайт", "🧩 Бло
 with tab1:
     st.header("📝 Заповни анкету")
 
+        # --- БЛОК ТАРИФІВ ---
+    plan_status = get_user_plan_status(st.session_state.user_id)
+    
+    col_plan1, col_plan2 = st.columns([3, 1])
+    with col_plan1:
+        st.info(f"**Ваш тариф:** {plan_status['name']}")
+    with col_plan2:
+        if not plan_status['is_pro']:
+            if st.button("🚀 Спробувати Pro (14 днів)", use_container_width=True):
+                if db.activate_pro_trial(st.session_state.user_id):
+                    st.success("✅ Pro активовано!")
+                    st.rerun()
+                else:
+                    st.error("Помилка активації")
+    st.markdown("---")
+
     # --- Прогрес-бар ---
     progress_items = 0
     total_items = 5
@@ -1705,6 +1767,10 @@ with tab1:
         with col4: price = st.number_input("Ціна (USD)", min_value=0, value=0, step=1, disabled=not is_paid)
         submit_button = st.form_submit_button("➕ Додати посилання")
         if submit_button:
+            current_plan = get_user_plan_status(st.session_state.user_id)
+            if len(st.session_state.links_list) >= current_plan['links']:
+                st.error(f"🔒 Ліміт тарифу {current_plan['name']}: максимум {current_plan['links']} посилань. Оновіть тариф!")
+                st.stop()
             if new_title and new_url:
                 st.session_state.links_list.append({"title": new_title, "url": new_url, "id": f"link_{len(st.session_state.links_list)}", "is_paid": is_paid, "price": price if is_paid else 0})
                 st.success(f"✅ Додано: {new_title}")
@@ -1904,33 +1970,47 @@ with tab2:
     
     with st.expander("📸 Галерея зображень"):
         st.write("Додайте фотографії до галереї")
-        gallery_option = st.radio("Як додати фото?", ["Завантажити файл", "Вставити посилання (URL)"], horizontal=True, key="gallery_option")
-        with st.form(key='gallery_form'):
-            if gallery_option == "Завантажити файл":
-                uploaded_gallery_img = st.file_uploader("Оберіть зображення", type=['png', 'jpg', 'jpeg', 'gif'], key="gallery_upload")
-                img_caption = st.text_input("Підпис (необов'язково)")
+        current_plan = get_user_plan_status(st.session_state.user_id)
+        
+        # 1. Перевірка ліміту ПЕРЕД тим, як показувати форму
+        if len(st.session_state.gallery_images) >= current_plan['gallery_limit'] and not current_plan['is_pro']:
+            st.warning(f"🔒 Ліміт тарифу {current_plan['name']}: максимум {current_plan['gallery_limit']} фото в галереї. Оновіть тариф, щоб додати більше!")
+        else:
+            # 2. Форма додавання (об'єднана для зручності)
+            gallery_option = st.radio("Як додати фото?", ["Завантажити файл", "Вставити посилання (URL)"], horizontal=True, key="gallery_option")
+            with st.form(key='gallery_form'):
+                if gallery_option == "Завантажити файл":
+                    uploaded_gallery_img = st.file_uploader("Оберіть зображення", type=['png', 'jpg', 'jpeg', 'gif'], key="gallery_upload")
+                    img_caption = st.text_input("Підпис (необов'язково)", key="cap_file")
+                    img_url = ""
+                else:
+                    uploaded_gallery_img = None
+                    img_url = st.text_input("URL зображення", placeholder="https://example.com/photo.jpg", key="gallery_url")
+                    img_caption = st.text_input("Підпис (необов'язково)", key="cap_url")
+                
                 if st.form_submit_button("➕ Додати фото"):
-                    if uploaded_gallery_img is not None:
+                    if gallery_option == "Завантажити файл" and uploaded_gallery_img is not None:
                         st.session_state.gallery_images.append({"src": image_to_data_uri(uploaded_gallery_img), "caption": img_caption})
-                        st.success("✅ Фото додано!"); st.rerun()
-                    else: st.warning("⚠️ Оберіть зображення!")
-            else:
-                img_url = st.text_input("URL зображення", placeholder="https://example.com/photo.jpg")
-                img_caption = st.text_input("Підпис (необов'язково)")
-                if st.form_submit_button("➕ Додати фото"):
-                    if img_url:
+                        st.success("✅ Фото додано!")
+                        st.rerun()
+                    elif gallery_option == "Вставити посилання (URL)" and img_url:
                         st.session_state.gallery_images.append({"src": img_url, "caption": img_caption})
-                        st.success("✅ Фото додано!"); st.rerun()
-                    else: st.warning("⚠️ Введіть URL!")
+                        st.success("✅ Фото додано!")
+                        st.rerun()
+                    else:
+                        st.warning("⚠️ Оберіть зображення або введіть URL!")
+                        
+        # 3. Відображення доданих фото
         if st.session_state.gallery_images:
             st.markdown("**Додані фото:**")
             for idx, img in enumerate(st.session_state.gallery_images):
                 col1, col2 = st.columns([4, 1])
-                with col1: st.image(img['src'], width=100, caption=img.get('caption', ''))
+                with col1: 
+                    st.image(img['src'], width=100, caption=img.get('caption', ''))
                 with col2:
                     if st.button("🗑️", key=f"gal_del_{idx}"):
-                        st.session_state.gallery_images.pop(idx); st.rerun()
-    
+                        st.session_state.gallery_images.pop(idx)
+                        st.rerun()    
     with st.expander("💬 Форма зворотного зв'язку"):
         contact_title = st.text_input("Заголовок форми", value=st.session_state.contact_title, placeholder="Зв'яжіться зі мною")
         st.session_state.contact_title = contact_title
@@ -1954,10 +2034,16 @@ with tab2:
                 prod_image = st.text_input("URL зображення", placeholder="https://example.com/product.jpg")
             prod_link = st.text_input("Посилання для покупки (необов'язково)", placeholder="https://...")
             if st.form_submit_button("➕ Додати товар"):
-                if prod_title:
+                current_plan = get_user_plan_status(st.session_state.user_id)
+                
+                if not current_plan['is_pro'] and len(st.session_state.products) >= current_plan['products']:
+                    st.error(f"🔒 Ліміт тарифу {current_plan['name']}: максимум {current_plan['products']} товарів.")
+                elif prod_title:
                     st.session_state.products.append({"title": prod_title, "price": prod_price, "description": prod_desc, "image": prod_image, "buy_link": prod_link})
-                    st.success(f"✅ Товар '{prod_title}' додано!"); st.rerun()
-                else: st.warning("⚠️ Введіть назву товару!")
+                    st.success(f"✅ Товар '{prod_title}' додано!")
+                    st.rerun()
+                else:
+                    st.warning("⚠️ Введіть назву товару!")
         if st.session_state.products:
             st.markdown("**Додані товари:**")
             for idx, prod in enumerate(st.session_state.products):
@@ -1979,6 +2065,10 @@ with tab2:
             st.components.v1.html(custom_html, height=200)
     
     with st.expander("🎞️ GIF анімація"):
+     current_plan = get_user_plan_status(st.session_state.user_id)
+    if not current_plan['has_gif']:
+        st.warning("🔒 GIF-анімація доступна тільки на тарифі Pro. [Оновити тариф](#)")
+        st.stop() # Цей рядок зупиняє відображення всього, що йде нижче в цьому expander'і
         gif_url = st.text_input("URL GIF", value=st.session_state.gif_url, placeholder="https://media.giphy.com/...")
         st.session_state.gif_url = gif_url
         gif_caption = st.text_input("Підпис", value=st.session_state.gif_caption)
