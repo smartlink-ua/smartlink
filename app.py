@@ -1557,8 +1557,7 @@ if st.button("🚪 Вийти з акаунту"):
 
 st.markdown("---")
 
-tab1, tab2, tab3, tab4 = st.tabs(["📝 Створити сайт", "🧩 Блоки", "📊 Статистика", "💰 Монетизація"])
-
+tab1, tab2, tab3, tab4, tab5 = st.tabs([" Створити сайт", "🧩 Блоки", "📊 Статистика", "💰 Монетизація", "️ Допомога та Тарифи"])
 with tab1:
     st.header("📝 Заповни анкету")
 
@@ -2082,6 +2081,98 @@ with tab4:
     4. **Після "оплати"** — зелений колір з 🔓
     5. **Збереження** — в localStorage
     """)
+with tab5:
+    st.header("ℹ️ Допомога та Тарифи")
+    
+    # --- ІНСТРУКЦІЯ ---
+    st.subheader("🚀 Як створити свій сайт за 3 кроки?")
+    st.markdown("""
+    1. ** Заповніть анкету**: Введіть своє ім'я, додайте аватар та короткий опис.
+    2. **🧩 Додайте контент**: Створіть список посилань, додайте товари, GIF або галерею у вкладці "Блоки".
+    3. **✨ Опублікуйте**: Натисніть кнопку "Згенерувати мій сайт" і отримайте унікальне публічне посилання, яким можна ділитися!
+    """)
+    
+    st.markdown("---")
+    
+    # --- МОЖЛИВОСТІ ---
+    st.subheader("💡 Що вміє SmartLink?")
+    col_f1, col_f2 = st.columns(2)
+    with col_f1:
+        st.markdown("""
+        -  **Власний міні-магазин**: Додавайте товари з фото, ціною та кошиком.
+        - 🎞️ **GIF та Галерея**: Зробіть свій сайт яскравим та візуально привабливим.
+        - 📩 **Форма зворотного зв'язку**: Отримуйте повідомлення від відвідувачів.
+        """)
+    with col_f2:
+        st.markdown("""
+        -  **Темна тема та шрифти**: Повна кастомізація дизайну під ваш бренд.
+        - 📊 **Аналітика**: Відстежуйте кліки та популярність ваших посилань.
+        - 📱 **Адаптивність**: Ідеальний вигляд на будь-якому смартфоні чи комп'ютері.
+        """)
+    
+    st.markdown("---")
+    
+    # --- ТАРИФИ ---
+    st.subheader("💎 Оберіть свій тариф")
+    st.caption("Ви можете змінити тариф у будь-який момент у вкладці '📝 Створити сайт'")
+    
+    col_p1, col_p2, col_p3 = st.columns(3)
+    
+    # FREE
+    with col_p1:
+        st.markdown("""
+        <div style="border: 1px solid #e0e0e0; border-radius: 15px; padding: 20px; text-align: center; height: 100%;">
+            <h3 style="margin-top: 0;">Free 🥉</h3>
+            <h2 style="color: #666;">0 <span style="font-size: 16px; font-weight: normal;">/ міс</span></h2>
+            <ul style="text-align: left; list-style-type: none; padding-left: 0;">
+                <li>✅ До 3-х посилань</li>
+                <li>✅ До 2-х товарів</li>
+                <li>✅ 1 фото в галереї</li>
+                <li>❌ Без GIF-анімації</li>
+                <li>ℹ️ Брендинг SmartLink</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    # PRO
+    with col_p2:
+        st.markdown("""
+        <div style="border: 2px solid #667eea; border-radius: 15px; padding: 20px; text-align: center; height: 100%; background: linear-gradient(135deg, #667eea11 0%, #764ba211 100%);">
+            <div style="background: #667eea; color: white; padding: 5px 15px; border-radius: 20px; font-size: 12px; font-weight: bold; display: inline-block; margin-bottom: 10px;">⭐ РЕКОМЕНДОВАНО</div>
+            <h3 style="margin-top: 0;">Pro 🥈</h3>
+            <h2 style="color: #667eea;">149₴ <span style="font-size: 16px; font-weight: normal;">/ міс</span></h2>
+            <ul style="text-align: left; list-style-type: none; padding-left: 0;">
+                <li>✅ До 20-ти посилань</li>
+                <li>✅ До 15-ти товарів</li>
+                <li>✅ До 15-ти фото в галереї</li>
+                <li>✅ GIF-анімація</li>
+                <li>✅ Без брендингу SmartLink</li>
+            </ul>
+            <p style="color: #667eea; font-weight: bold; font-size: 14px;">🎁 14 днів безкоштовно!</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    # UNLIMITED
+    with col_p3:
+        st.markdown("""
+        <div style="border: 1px solid #e0e0e0; border-radius: 15px; padding: 20px; text-align: center; height: 100%;">
+            <h3 style="margin-top: 0;">Unlimited 🥇</h3>
+            <h2 style="color: #ffd700;">399₴ <span style="font-size: 16px; font-weight: normal;">/ міс</span></h2>
+            <ul style="text-align: left; list-style-type: none; padding-left: 0;">
+                <li>✅ <strong>Безліміт</strong> посилань</li>
+                <li>✅ <strong>Безліміт</strong> товарів</li>
+                <li>✅ <strong>Безліміт</strong> фото</li>
+                <li>✅ GIF-анімація</li>
+                <li>✅ Пріоритетна підтримка</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
 
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Підказка для активації
+    plan_status = get_user_plan_status(st.session_state.user_id)
+    if not plan_status['is_pro']:
+        st.info("👆 Щоб активувати 14-денний безкоштовний період Pro, перейдіть у вкладку **'📝 Створити сайт'** і натисніть кнопку **'🚀 Спробувати Pro'**.")
 st.markdown("---")
 st.markdown("Створено з ❤️ за допомогою Streamlit")
