@@ -374,6 +374,7 @@ def export_config():
         'gallery_images': st.session_state.get('gallery_images', []),
         'contact_title': st.session_state.get('contact_title', ''),
         'contact_info': st.session_state.get('contact_info', ''),
+        'contact_email': st.session_state.get('contact_email', ''),
         'products': st.session_state.get('products', []),
     }
     return json.dumps(config, ensure_ascii=False, indent=2)
@@ -401,6 +402,10 @@ def import_config(json_string):
         st.session_state.gallery_images = config.get('gallery_images', [])
         st.session_state.contact_title = config.get('contact_title', '')
         st.session_state.contact_info = config.get('contact_info', '')
+        st.session_state.contact_title = config.get('contact_title', '')
+        st.session_state.contact_info = config.get('contact_info', '')
+        st.session_state.contact_email = config.get('contact_email', '')  # <-- ДОДАТИ ЦЕЙ РЯДОК
+        st.session_state.products = config.get('products', [])
         st.session_state.products = config.get('products', [])
         save_config_to_supabase(st.session_state.user_id)
         return True
@@ -488,20 +493,70 @@ def generate_gallery_block(images: List[Dict]) -> str:
         <span class="lightbox-close">&times;</span><div class="lightbox-content" id="lightbox-content">{lightbox_items}</div>
     </div>"""
 
-def generate_contact_form_block(form_title: str, recipient_info: str) -> str:
+def generate_contact_form_block(form_title: str, recipient_info: str, recipient_email: str, site_name: str) -> str:
     if not form_title: return ""
+    
+    if not recipient_email: 
+        return f'<div class="contact-section"><h2 class="block-title">{form_title}</h2><p style="text-align:center; color:#999;">Форма тимчасово недоступна.</p></div>'
+    
+    form_action_url = f"https://formsubmit.co/ajax/{recipient_email}"
+    
     return f"""
     <div class="contact-section">
         <h2 class="block-title">{form_title}</h2>
-        <form class="contact-form" onsubmit="submitContactForm(event)">
+        <form class="contact-form" id="contactForm" onsubmit="sendContactForm(event, '{form_action_url}')">
+            <input type="hidden" name="_subject" value="Нове повідомлення з сайту {site_name}!">
+            <input type="hidden" name="_captcha" value="false">
+            <input type="hidden" name="_template" value="table">
+            
             <input type="text" name="name" placeholder="Ваше ім'я" required class="form-input">
             <input type="email" name="email" placeholder="Ваш email" required class="form-input">
             <textarea name="message" placeholder="Ваше повідомлення" required class="form-input form-textarea"></textarea>
-            <button type="submit" class="form-submit">📩 Надіслати</button>
+            <button type="submit" class="form-submit" id="contactSubmitBtn">📩 Надіслати</button>
         </form>
         <p class="form-info">{recipient_info}</p>
-        <div id="form-success" class="form-success" style="display:none;">✅ Дякуємо! Ваше повідомлення надіслано.</div>
-    </div>"""
+        <div id="form-success" class="form-success" style="display:none;">✅ Дякуємо! Ваше повідомлення успішно надіслано.</div>
+        <div id="form-error" class="form-error" style="display:none; color:red; margin-top:10px;">❌ Помилка відправки. Спробуйте пізніше.</div>
+    </div>
+    
+    <script>
+    function sendContactForm(event, actionUrl) {{
+        event.preventDefault();
+        const form = event.target;
+        const btn = document.getElementById('contactSubmitBtn');
+        const successMsg = document.getElementById('form-success');
+        const errorMsg = document.getElementById('form-error');
+        
+        btn.innerHTML = '⏳ Відправка...';
+        btn.disabled = true;
+        
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+        
+        fetch(actionUrl, {{
+            method: 'POST',
+            headers: {{ 'Content-Type': 'application/json', 'Accept': 'application/json' }},
+            body: JSON.stringify(data)
+        }})
+        .then(response => response.json())
+        .then(data => {{
+            if (data.success) {{
+                form.style.display = 'none';
+                successMsg.style.display = 'block';
+            }} else {{
+                errorMsg.style.display = 'block';
+                btn.innerHTML = '📩 Надіслати';
+                btn.disabled = false;
+            }}
+        }})
+        .catch(error => {{
+            errorMsg.style.display = 'block';
+            btn.innerHTML = '📩 Надіслати';
+            btn.disabled = false;
+        }});
+    }}
+    </script>
+    """
 
 def generate_products_block(products: List[Dict], theme_color: str) -> str:
     """Генерує каталог товарів з кошиком"""
@@ -813,7 +868,7 @@ def generate_products_block(products: List[Dict], theme_color: str) -> str:
 # ГЕНЕРАЦІЯ ПОВНОГО HTML
 # ============================================================================
 
-def generate_full_html(name, bio, avatar_image_data_uri, links, theme_color, theme_choice, font_choice, dark_mode, background_image_data_uri, faq_items, countdown_date, countdown_title, custom_html, gif_url, gif_caption, quote_text, quote_author, features, gallery_images, contact_title, contact_info, products, supabase_url='', supabase_anon_key='', profile_id=''):
+def generate_full_html(name, bio, avatar_image_data_uri, links, theme_color, theme_choice, font_choice, dark_mode, background_image_data_uri, faq_items, countdown_date, countdown_title, custom_html, gif_url, gif_caption, quote_text, quote_author, features, gallery_images, contact_title, contact_info, products, contact_email='', supabase_url='', supabase_anon_key='', profile_id=''):
     icon_svg = generate_icon_svg(name, theme_color)
     icon_data_uri = svg_to_data_uri(icon_svg)
     theme_styles = get_theme_styles(theme_choice, theme_color)
@@ -847,7 +902,7 @@ def generate_full_html(name, bio, avatar_image_data_uri, links, theme_color, the
                    generate_features_block(features) + generate_gallery_block(gallery_images) + \
                    generate_products_block(products, theme_color) + generate_faq_block(faq_items) + \
                    generate_countdown_block(countdown_date, countdown_title) + \
-                   generate_contact_form_block(contact_title, contact_info) + generate_custom_html_block(custom_html)
+                   generate_contact_form_block(contact_title, contact_info, contact_email, name) + generate_custom_html_block(custom_html)
 
     return f"""<!DOCTYPE html>
 <html lang="uk">
@@ -2000,12 +2055,23 @@ with tab2:
                         st.session_state.gallery_images.pop(idx)
                         st.rerun()    
     with st.expander("💬 Форма зворотного зв'язку"):
-        contact_title = st.text_input("Заголовок форми", value=st.session_state.contact_title, placeholder="Зв'яжіться зі мною")
-        st.session_state.contact_title = contact_title
-        contact_info = st.text_input("Інформація для користувача", value=st.session_state.contact_info, placeholder="Відповім протягом 24 годин")
-        st.session_state.contact_info = contact_info
-        if contact_title: st.info("💡 Повідомлення зберігаються в localStorage браузера відвідувача")
-    
+        st.write("Налаштуйте форму, щоб отримувати повідомлення від відвідувачів на пошту.")
+        contact_title = st.text_input("Заголовок форми", value=st.session_state.get('contact_title', ''), placeholder="Зв'яжіться зі мною")
+        st.session_state['contact_title'] = contact_title
+        
+        contact_info = st.text_input("Текст-підказка під формою", value=st.session_state.get('contact_info', ''), placeholder="Відповім протягом 24 годин")
+        st.session_state['contact_info'] = contact_info
+        
+        contact_email = st.text_input(
+            "📧 Email для отримання повідомлень", 
+            value=st.session_state.get('contact_email', ''),
+            placeholder="your@email.com",
+            help="На цю пошту приходитимуть повідомлення. Перший раз FormSubmit попросить підтвердити її."
+        )
+        st.session_state['contact_email'] = contact_email
+        
+        if contact_title and not contact_email:
+            st.warning("⚠️ Ви увімкнули форму, але не вказали Email! Повідомлення не будуть приходити.")    
     with st.expander("🛍️ Каталог товарів"):
         st.write("Додайте товари для продажу")
         product_img_option = st.radio("Як додати зображення товару?", ["Завантажити файл", "Вставити посилання (URL)", "Без зображення"], horizontal=True, key="product_img_option")
