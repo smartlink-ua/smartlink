@@ -2056,6 +2056,7 @@ with tab2:
                         st.rerun()    
     with st.expander("💬 Форма зворотного зв'язку"):
         st.write("Налаштуйте форму, щоб отримувати повідомлення від відвідувачів на пошту.")
+        
         contact_title = st.text_input("Заголовок форми", value=st.session_state.get('contact_title', ''), placeholder="Зв'яжіться зі мною")
         st.session_state['contact_title'] = contact_title
         
@@ -2070,8 +2071,11 @@ with tab2:
         )
         st.session_state['contact_email'] = contact_email
         
-        if contact_title and not contact_email:
-            st.warning("⚠️ Ви увімкнули форму, але не вказали Email! Повідомлення не будуть приходити.")    
+        # 🔍 ДІАГНОСТИКА (Тепер точно з'явиться!)
+        if st.session_state.get('contact_email'):
+            st.success(f"✅ Email збережено: {st.session_state['contact_email']}")
+        else:
+            st.warning("️ Email не вказано! Форма буде показувати 'Тимчасово недоступна'.")
     with st.expander("🛍️ Каталог товарів"):
         st.write("Додайте товари для продажу")
         product_img_option = st.radio("Як додати зображення товару?", ["Завантажити файл", "Вставити посилання (URL)", "Без зображення"], horizontal=True, key="product_img_option")
