@@ -325,6 +325,7 @@ def load_config_from_supabase(user_id: str):
                 st.session_state['gallery_images'] = config.get('gallery_images', [])
                 st.session_state['contact_title'] = config.get('contact_title', '')
                 st.session_state['contact_info'] = config.get('contact_info', '')
+                st.session_state['contact_email'] = config.get('contact_email', '')  # <--- ДОДАНО ЦЕЙ РЯДОК
                 st.session_state['products'] = config.get('products', [])
                 print("✅ Блоки з site_config успішно завантажено!")
             except Exception as e:
@@ -1495,6 +1496,7 @@ if public_user_id:
         gallery_images=config.get('gallery_images', []),
         contact_title=config.get('contact_title', ''),
         contact_info=config.get('contact_info', ''),
+        contact_email=config.get('contact_email', ''),  # <--- ДОДАНО ЦЕЙ РЯДОК
         products=products,
         supabase_url=os.getenv('SUPABASE_URL', 'https://nwuijdpamsijypmviwra.supabase.co'),
         supabase_anon_key=os.getenv('SUPABASE_KEY', ''),
@@ -1859,6 +1861,7 @@ with tab1:
                 final_bio = st.session_state.get('generated_bio', bio) if 'generated_bio' in st.session_state else bio
                 
                 # Генеруємо HTML для попереднього перегляду
+                print(f"🔍 ДЕТЕКТОР: Email перед відправкою в генератор = '{st.session_state.get('contact_email', 'ПУСТО')}'")
                 html_content = generate_full_html(
                     name=name, bio=final_bio, avatar_image_data_uri=avatar_image_data_uri,
                     links=st.session_state.links_list, theme_color=theme_color, theme_choice=theme_choice,
@@ -1868,7 +1871,9 @@ with tab1:
                     gif_url=st.session_state.get('gif_url', ''), gif_caption=st.session_state.get('gif_caption', ''),
                     quote_text=st.session_state.get('quote_text', ''), quote_author=st.session_state.get('quote_author', ''),
                     features=st.session_state.get('features', []), gallery_images=st.session_state.get('gallery_images', []),
-                    contact_title=st.session_state.get('contact_title', ''), contact_info=st.session_state.get('contact_info', ''),
+                    contact_title=st.session_state.get('contact_title', ''), 
+                    contact_info=st.session_state.get('contact_info', ''),
+                    contact_email=st.session_state.get('contact_email', ''),  # <--- ДОДАНО ЦЕЙ РЯДОК
                     products=st.session_state.get('products', []),
                     supabase_url=os.getenv('SUPABASE_URL', 'https://nwuijdpamsijypmviwra.supabase.co'),
                     supabase_anon_key=os.getenv('SUPABASE_KEY', ''),
