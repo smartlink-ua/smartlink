@@ -326,6 +326,10 @@ def load_config_from_supabase(user_id: str):
                 st.session_state['contact_title'] = config.get('contact_title', '')
                 st.session_state['contact_info'] = config.get('contact_info', '')
                 st.session_state['contact_email'] = config.get('contact_email', '')  # <--- ОЦЬОГО РЯДКА НЕ ВИСТАЧАЛО!
+
+                # 🔍 ДОДАЙТЕ ЦЕЙ РЯДОК ДЛЯ ДІАГНОСТИКИ:
+                print(f"🕵️ ШПИГУН: З бази даних прийшов contact_email = '{st.session_state['contact_email']}'")
+
                 st.session_state['products'] = config.get('products', [])
                 print("✅ Блоки з site_config успішно завантажено!")
             except Exception as e:
