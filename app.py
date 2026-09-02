@@ -251,7 +251,18 @@ def save_config_to_supabase(user_id: str):
         
         # 2. Перетворюємо рядок JSON у словник Python
         full_config_dict = json.loads(full_config_json)
+                # 🔍 ДІАГНОСТИКА: Що ми зберігаємо в site_config?
+        print(f"🔍 ДІАГНОСТИКА save_config_to_supabase:")
+        print(f"  - contact_email в session_state: '{st.session_state.get('contact_email', 'ПУСТО')}'")
+        print(f"  - contact_email в full_config_dict: '{full_config_dict.get('contact_email', 'НЕМАЄ В СЛОВНИКУ')}'")
+        print(f"  - Розмір site_config: {len(full_config_json)} символів")
         
+        # Перевіряємо, чи є contact_email в JSON
+        if 'contact_email' in full_config_dict:
+            print(f"  ✅ contact_email ПРИСУТНІЙ в JSON: '{full_config_dict['contact_email']}'")
+        else:
+            print(f"  ❌ contact_email ВІДСУТНІЙ в JSON!")
+            print(f"  📋 Усі ключі в config: {list(full_config_dict.keys())}")
         # 3. Формуємо дані профілю
         profile_data = {
             'name': st.session_state.get('name_value', ''),
